@@ -1,6 +1,5 @@
 import { Redis } from '@upstash/redis';
 
-// Initialize Redis
 const redis = Redis.fromEnv();
 
 export default async function handler(req, res) {
@@ -13,7 +12,7 @@ export default async function handler(req, res) {
       const state = JSON.parse(stateJSON);
       res.status(200).json(state);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch state from KV.' });
+      res.status(500).json({ error: 'Failed to fetch state from Redis.' });
     }
   } else {
     res.setHeader('Allow', ['GET']);
