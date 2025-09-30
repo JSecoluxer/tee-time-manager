@@ -1,9 +1,12 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+// Initialize Redis
+const redis = Redis.fromEnv();
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      const stateJSON = await kv.get('tee_time_state');
+      const stateJSON = await redis.get('tee_time_state');
       if (!stateJSON) {
         return res.status(200).json({ message: 'No state found. Please initialize.' });
       }

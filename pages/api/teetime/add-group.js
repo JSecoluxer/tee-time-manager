@@ -1,10 +1,12 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 import { TeeTimeService, GolfGroup } from '@/services/teeTimeService';
+
+const redis = Redis.fromEnv();
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
-      const stateJSON = await kv.get('tee_time_state');
+      const stateJSON = await redis.get('tee_time_state');
       if (!stateJSON) {
         return res.status(400).json({ error: 'State not initialized.' });
       }
@@ -25,7 +27,7 @@ export default async function handler(req, res) {
       const scheduleResult = TeeTimeService.fillEmptyTeeBoxes(updatedState);
       updatedState = scheduleResult.newState;
 
-      await kv.set('tee_time_state', JSON.stringify(updatedState));
+      await redis.set('tee_time_state', JSON.stringify(updatedState));
       res.status(200).json({ message: 'Group added and schedule updated.', state: updatedState, logs: scheduleResult.logs });
     } catch (error) {
       res.status(500).json({ error: 'Failed to add group.' });
