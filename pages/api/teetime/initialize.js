@@ -6,7 +6,13 @@ const redis = Redis.fromEnv();
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
-      const initialState = TeeTimeService.initializeState();
+      const { totalHoles } = req.body;
+
+      if (!totalHoles) {
+        return res.status(400).json({ error: 'The number of total holes is required.' });
+      }
+
+      const initialState = TeeTimeService.initializeState(totalHoles);
       await redis.set('tee_time_state', JSON.stringify(initialState));
       res.status(200).json({ message: 'Tee time state initialized successfully.', state: initialState });
     } catch (error) {

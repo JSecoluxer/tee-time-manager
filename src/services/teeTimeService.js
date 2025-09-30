@@ -17,22 +17,35 @@ export class GolfGroup {
 export const TeeTimeService = {
   /**
    * Initializes the system state
+   * @param {number} totalHoles
+   * @param {number} maxGroupsPerTeeBox
    */
   initializeState(totalHoles = 18, maxGroupsPerTeeBox = 3) {
     const teeBoxes = {};
-    if (totalHoles >= 18) {
+
+    // Default starting tee box is Hole 1
+    if (totalHoles >= 1) {
       teeBoxes[1] = [];
-      if (totalHoles >= 10) teeBoxes[10] = [];
     }
-    if (totalHoles > 18 && totalHoles >= 19) teeBoxes[19] = [];
+
+    // If total holes is 10 or more, set Hole 10 as a starting tee box
+    if (totalHoles >= 10) {
+      teeBoxes[10] = [];
+    }
+
+    // If total holes is 19 or more (e.g., 27-hole course), set Hole 19 as a starting tee box
+    if (totalHoles >= 19) {
+      teeBoxes[19] = [];
+    }
+
+    // Note: You can add other starting tee boxes here, for example, if totalHoles=36, Hole 28 might be included
 
     // Initialize the transition queue
     const transitioningGroups = {};
+
+    // Include all defined teeBoxes in transitioningGroups to receive transferring groups
     Object.keys(teeBoxes).forEach(hole => {
-      // Hole 1 won't have transitioning groups, but can be kept for structural consistency
-      if (hole !== '1') {
-        transitioningGroups[hole] = [];
-      }
+      transitioningGroups[hole] = [];
     });
 
     return {
@@ -83,6 +96,8 @@ export const TeeTimeService = {
           movedGroup = waitingList.shift();
           movedGroup.currentHole = hole;
           movedGroup.status = 'PLAYING';
+          movedGroup.holesCompleted = 0;
+          movedGroup.startHole = hole;
           teeBox.push(movedGroup);
           logs.push(`[New Tee Off] Group ${movedGroup.name} enters Tee Box ${hole} from the waiting list.`);
         } else {
@@ -139,23 +154,47 @@ export const TeeTimeService = {
     const logs = [];
 
     const group = groupsOnCourse[groupId];
+
     if (!group) {
       logs.push(`[Move Error] Group with ID ${groupId} not found on the course.`);
       return { newState: state, logs };
     }
 
-    const nextHole = group.currentHole + 1;
-    logs.push(`Group ${group.name} finished hole ${group.currentHole}, moving to hole ${nextHole}.`);
+    // Increment the number of holes completed after finishing the current hole (assume +1 per hole)
+    group.holesCompleted += 1;
 
-    if (nextHole > totalHoles) {
-      // Finished all holes
+    const ROUND_GOAL = 18;
+
+    // 1. Check if the group has reached 18 holes (Finish Condition)
+    if (group.holesCompleted >= ROUND_GOAL) {
       group.status = 'FINISHED';
-      delete groupsOnCourse[groupId]; // Remove from the course
-      logs.push(`[Finished] Group ${group.name} has completed the course.`);
+      delete groupsOnCourse[groupId];
+      logs.push(`[Finished] Group ${group.name} completes the required ${ROUND_GOAL} holes.`);
       return { newState, logs };
     }
 
-    // Check if the next hole is a tee box (requires transition)
+    let nextHole = group.currentHole + 1;
+    logs.push(`Group ${group.name} finished hole ${group.currentHole}, moving to hole ${nextHole}.`);
+
+    // 2. Handle inter-section loop/transition logic (Loop Logic)
+    
+    // A. Handle 27 -> 1 Loop: When Hole 27 is finished (nextHole = 28) and the course supports 27 holes, loop to Hole 1
+    if (nextHole === 28 && totalHoles >= 27) {
+        if (teeBoxes.hasOwnProperty(1)) {
+            nextHole = 1;
+            logs.push(`[Loop] Group ${group.name} finished Hole 27 and loops to Tee Box 1.`);
+        }
+    } 
+    // B. Handle 18 -> 1 Loop: When Hole 18 is finished (nextHole = 19) and the course is 18 holes or less, loop to Hole 1
+    //    If totalHoles > 18 (e.g., 27), when nextHole=19, it will be handled by the teeBoxes check below and transition to Hole 19
+    else if (nextHole === 19 && totalHoles <= 18) {
+        if (teeBoxes.hasOwnProperty(1)) {
+            nextHole = 1;
+            logs.push(`[Loop] Group ${group.name} finished Hole 18 and loops to Tee Box 1.`);
+        }
+    }
+
+    // 3. Check if the next hole is a tee box (requires transition/queuing, e.g., Hole 10, Hole 19, or the looped Hole 1)
     if (teeBoxes.hasOwnProperty(nextHole)) {
       delete groupsOnCourse[groupId]; // Remove from the general on-course list
       transitioningGroups[nextHole].push(group); // Add to the priority transition queue

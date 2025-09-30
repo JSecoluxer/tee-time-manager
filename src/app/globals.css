@@ -40,3 +40,13 @@ a {
     color-scheme: dark;
   }
 }
+
+table {
+  border-collapse: collapse;
+  width: 60%;
+}
+
+thead th, tr td {
+  padding: 8px 12px;
+  text-align: center;
+}

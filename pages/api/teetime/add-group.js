@@ -6,13 +6,14 @@ const redis = Redis.fromEnv();
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
-      const stateJSON = await redis.get('tee_time_state');
-      if (!stateJSON) {
+      const currentState = await redis.get('tee_time_state');
+
+      if (!currentState) {
         return res.status(400).json({ error: 'State not initialized.' });
       }
-      let currentState = JSON.parse(stateJSON);
 
       const { name, players } = req.body;
+
       if (!name) {
         return res.status(400).json({ error: 'Group name is required.' });
       }

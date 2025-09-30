@@ -11,12 +11,17 @@ export default function HomePage() {
   });
 
   const [groupName, setGroupName] = useState('');
+  const [totalHoles, setTotalHoles] = useState(18);
   const [logs, setLogs] = useState([]);
 
   const addLog = (newLogs) => {
     if (newLogs && newLogs.length > 0) {
       setLogs(prev => [...newLogs, ...prev.slice(0, 100)]); // Keep last 100 logs
     }
+  };
+
+  const handleClearLogs = () => {
+    setLogs([]);
   };
 
   const handleApiCall = async (url, body) => {
@@ -31,7 +36,11 @@ export default function HomePage() {
     return result;
   };
 
-  const handleInitialize = () => handleApiCall('/api/teetime/initialize', {});
+  const handleInitialize = () => {
+    const holes = parseInt(totalHoles, 10);
+    handleApiCall('/api/teetime/initialize', { totalHoles: holes });
+  }
+
   const handleAddGroup = (e) => {
     e.preventDefault();
     if (groupName) {
@@ -50,22 +59,64 @@ export default function HomePage() {
   return (
     <div style={{ fontFamily: 'sans-serif', padding: '20px', display: 'flex', gap: '20px' }}>
       <div style={{ flex: 1 }}>
-        <h1>Tee Time Management</h1>
-        <button onClick={handleInitialize}>Initialize / Reset System</button>
-
+        <h1>Tee Time Management (Total Holes: {state.totalHoles})</h1>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '24px' }}>
+            <label htmlFor="totalHolesSelect" style={{ fontWeight: 'bold' }}>Set Total Holes:</label>
+            <select
+              id="totalHolesSelect"
+              value={totalHoles}
+              onChange={(e) => setTotalHoles(e.target.value)}
+              style={{
+                height: '40px',
+                padding: '0 8px',
+                borderRadius: '6px',
+              }}
+            >
+              <option value={18}>18</option>
+              <option value={27}>27</option>
+            </select>
+          </div>
+          <button
+            onClick={handleInitialize}
+            style={{
+              width: '290px',
+              height: '40px',
+              borderRadius: '6px',
+              marginTop: '10px',
+              cursor: 'pointer',
+            }}
+          >
+            Initialize / Reset System
+          </button>
+        </div>
         <form onSubmit={handleAddGroup} style={{ margin: '20px 0' }}>
           <input
             type="text"
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
             placeholder="New Group Name"
+            style={{
+              height: '40px',
+            }}
           />
-          <button type="submit">Add to Waiting List</button>
+          <button
+            type="submit"
+            style={{
+              width: '120px',
+              height: '40px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              marginLeft: '3px',
+            }}
+          >
+            Add to Waiting List
+          </button>
         </form>
 
-        <h2>Current Status</h2>
+        <h2 style={{ marginBottom: '16px', marginTop: '24px' }}>Current Status</h2>
         {state.message ? <p>{state.message}</p> : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '65vh', overflowY: 'auto' }}>
             <div>
               <h3>Waiting List ({state.waitingList?.length || 0})</h3>
               <ul>{state.waitingList?.map(g => <li key={g.id}>{g.name}</li>)}</ul>
@@ -73,14 +124,14 @@ export default function HomePage() {
 
             <div style={{ display: 'flex', gap: '30px' }}>
               {Object.entries(state.teeBoxes || {}).map(([hole, groups]) => (
-                <div key={hole} style={{ border: '1px solid #ccc', padding: '10px' }}>
+                <div key={hole} style={{ border: '1px solid #ccc', padding: '16px' }}>
                   <h4>Tee Box {hole} ({groups.length}/{state.maxGroupsPerTeeBox})</h4>
                   {state.transitioningGroups?.[hole]?.length > 0 && (
-                    <div style={{ fontSize: '0.8em', color: 'blue' }}>
+                    <div style={{ fontSize: '0.8em', color: '#9eff71ff', marginTop: '3px' }}>
                       Waiting (Priority): {state.transitioningGroups[hole].map(g => g.name).join(', ')}
                     </div>
                   )}
-                  <ol>
+                  <ol style={{ padding: '12px' }}>
                     {groups.map((group, index) => (
                       <li key={group.id}>
                         {group.name}
@@ -95,7 +146,7 @@ export default function HomePage() {
             </div>
 
             <div>
-              <h3>Groups On Course ({groupsOnCourse.length})</h3>
+              <h3 style={{ marginBottom: '16px' }}>Groups On Course ({groupsOnCourse.length})</h3>
               <table border="1" cellPadding="5">
                 <thead>
                   <tr><th>Group Name</th><th>Current Hole</th><th>Action</th></tr>
@@ -106,7 +157,7 @@ export default function HomePage() {
                       <td>{group.name}</td>
                       <td>{group.currentHole}</td>
                       <td>
-                        <button onClick={() => handleFinishHole(group.id)}>Finish Hole {group.currentHole}</button>
+                        <button style={{ padding: '3px 8px', cursor: 'pointer' }} onClick={() => handleFinishHole(group.id)}>Finish Hole {group.currentHole}</button>
                       </td>
                     </tr>
                   ))}
@@ -118,9 +169,25 @@ export default function HomePage() {
       </div>
 
       <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
-        <h2>Logs</h2>
-        <div style={{ backgroundColor: '#f0f0f0', height: '80vh', overflowY: 'scroll', padding: '10px', fontSize: '0.9em' }}>
-          {logs.map((log, i) => <div key={i} style={{ borderBottom: '1px solid #ddd', padding: '2px 0' }}>{log}</div>)}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>Logs</h2>
+          <button 
+            onClick={handleClearLogs}
+            style={{ 
+              padding: '5px 10px', 
+              cursor: 'pointer', 
+              borderRadius: '4px',
+              backgroundColor: '#f44336',
+              color: 'white',
+              border: 'none',
+              fontSize: '0.85em'
+            }}
+          >
+            Clear Logs
+          </button>
+        </div>
+        <div style={{ backgroundColor: '#f0f0f0', height: '90vh', overflowY: 'auto', padding: '10px', fontSize: '0.9em', marginTop: '8px' }}>
+          {logs.map((log, i) => <div key={i} style={{ borderBottom: '1px solid #ddd', padding: '2px 0', color: 'black' }}>{log}</div>)}
         </div>
       </div>
     </div>

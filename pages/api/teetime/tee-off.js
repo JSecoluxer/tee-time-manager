@@ -7,12 +7,14 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const { groupId } = req.body;
+
       if (!groupId) return res.status(400).json({ error: 'groupId is required.' });
 
-      const stateJSON = await redis.get('tee_time_state');
-      if (!stateJSON) return res.status(400).json({ error: 'State not initialized.' });
+      const currentState = await redis.get('tee_time_state');
+      
+      if (!currentState) return res.status(400).json({ error: 'State not initialized.' });
 
-      let currentState = JSON.parse(stateJSON);
+      // let currentState = JSON.parse(stateJSON);
       const { newState, logs } = TeeTimeService.teeOffGroup(currentState, groupId);
 
       await redis.set('tee_time_state', JSON.stringify(newState));
