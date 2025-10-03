@@ -136,7 +136,7 @@ export default function HomePage() {
                       <li key={group.id}>
                         {group.name}
                         {index === 0 && (
-                          <button onClick={() => handleTeeOff(group.id)} style={{ marginLeft: '10px' }}>Tee Off</button>
+                          <button onClick={() => handleTeeOff(group.id)} style={{ marginLeft: '10px', cursor: 'pointer' }}>Tee Off</button>
                         )}
                       </li>
                     ))}

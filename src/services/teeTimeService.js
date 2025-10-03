@@ -164,6 +164,7 @@ export const TeeTimeService = {
     group.holesCompleted += 1;
 
     const ROUND_GOAL = 18;
+    const currentHole = group.currentHole; // Store current hole for logging
 
     // 1. Check if the group has reached 18 holes (Finish Condition)
     if (group.holesCompleted >= ROUND_GOAL) {
@@ -173,35 +174,47 @@ export const TeeTimeService = {
       return { newState, logs };
     }
 
-    let nextHole = group.currentHole + 1;
-    logs.push(`Group ${group.name} finished hole ${group.currentHole}, moving to hole ${nextHole}.`);
+    let nextHole = currentHole + 1;
+    let loopLog = null; // Store loop log temporarily
 
     // 2. Handle inter-section loop/transition logic (Loop Logic)
-    
+
     // A. Handle 27 -> 1 Loop: When Hole 27 is finished (nextHole = 28) and the course supports 27 holes, loop to Hole 1
     if (nextHole === 28 && totalHoles >= 27) {
-        if (teeBoxes.hasOwnProperty(1)) {
-            nextHole = 1;
-            logs.push(`[Loop] Group ${group.name} finished Hole 27 and loops to Tee Box 1.`);
-        }
-    } 
+      if (teeBoxes.hasOwnProperty(1)) {
+        nextHole = 1;
+        loopLog = `[Loop] Group ${group.name} finished Hole 27 and loops to Tee Box 1.`;
+      }
+    }
     // B. Handle 18 -> 1 Loop: When Hole 18 is finished (nextHole = 19) and the course is 18 holes or less, loop to Hole 1
-    //    If totalHoles > 18 (e.g., 27), when nextHole=19, it will be handled by the teeBoxes check below and transition to Hole 19
     else if (nextHole === 19 && totalHoles <= 18) {
-        if (teeBoxes.hasOwnProperty(1)) {
-            nextHole = 1;
-            logs.push(`[Loop] Group ${group.name} finished Hole 18 and loops to Tee Box 1.`);
-        }
+      if (teeBoxes.hasOwnProperty(1)) {
+        nextHole = 1;
+        loopLog = `[Loop] Group ${group.name} finished Hole 18 and loops to Tee Box 1.`;
+      }
     }
 
     // 3. Check if the next hole is a tee box (requires transition/queuing, e.g., Hole 10, Hole 19, or the looped Hole 1)
     if (teeBoxes.hasOwnProperty(nextHole)) {
       delete groupsOnCourse[groupId]; // Remove from the general on-course list
       transitioningGroups[nextHole].push(group); // Add to the priority transition queue
+
+      // LOGGING CHANGE: Log transition first, then loop, then final move summary
       logs.push(`[Transition] Group ${group.name} is now waiting for Tee Box ${nextHole}.`);
+      if (loopLog) {
+        logs.push(loopLog); // Add the loop log if it happened
+        logs.push(`Group ${group.name} finished hole ${currentHole}, moving to hole ${nextHole}.`); // Log final move (18 -> 1)
+      } else {
+        // Log standard move to a tee box
+        logs.push(`Group ${group.name} finished hole ${currentHole}, moving to hole ${nextHole}.`);
+      }
+
     } else {
       // Just moving to the next hole, update the hole number
       group.currentHole = nextHole;
+
+      // LOGGING CHANGE: Log standard move (e.g., 5 -> 6)
+      logs.push(`Group ${group.name} finished hole ${currentHole}, moving to hole ${nextHole}.`);
     }
 
     // After the group enters the transition queue, execute a schedule check immediately to see if they can immediately fill a tee box
