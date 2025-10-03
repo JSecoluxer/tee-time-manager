@@ -1,5 +1,3 @@
-// services/teeTimeService.js
-
 export class GolfGroup {
   constructor(id, name, players = 4) {
     this.id = id;

@@ -14,7 +14,6 @@ export default async function handler(req, res) {
       
       if (!currentState) return res.status(400).json({ error: 'State not initialized.' });
 
-      // let currentState = JSON.parse(stateJSON);
       const { newState, logs } = TeeTimeService.teeOffGroup(currentState, groupId);
 
       await redis.set('tee_time_state', JSON.stringify(newState));
